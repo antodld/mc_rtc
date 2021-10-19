@@ -192,8 +192,8 @@ void StabilizerTask::addToGUI(mc_rtc::gui::StateBuilder & gui)
                      "Exponant", [this]() { return c_.NonLinear_exp; },
                      [this](double a) { c_.NonLinear_exp = a; }),
                  NumberInput(
-                     "Tconv", [this]() { return c_.Tconv; },
-                     [this](double a) { c_.Tconv = a; }));
+                     "Tconv", [this]() { return Tconv; },
+                     [this](double a) { Tconv = a; }));
                      
 
   gui.addElement({"Tasks", name_, "Debug"}, Button("Disable", [this]() { disable(); }));
@@ -414,7 +414,7 @@ void StabilizerTask::addToLogger(mc_rtc::Logger & logger)
                      [this]() -> const Eigen::Vector2d & { return c_.dcmBias.biasLimit; });
   logger.addLogEntry(name_ + "_dcmBias_localBias", this, [this]() { return dcmEstimator_.getLocalBias(); });
   logger.addLogEntry(name_ + "_dcmBias_bias", this, [this]() { return dcmEstimator_.getBias(); });
-  logger.addLogEntry(name_ + "_dcmNonLinear_Tconv", this, [this]() { return c_.Tconv; });
+  logger.addLogEntry(name_ + "_dcmNonLinear_Tconv", this, [this]() { return Tconv; });
   logger.addLogEntry(name_ + "_dcmNonLinear_Gains", this, [this]() { return Eigen::Vector2d{NonLinearDCM_PropGain_x,NonLinearDCM_PropGain_y}; });
   MC_RTC_LOG_HELPER(name_ + "_extWrench_comOffsetTarget", comOffsetTarget_);
   MC_RTC_LOG_HELPER(name_ + "_extWrench_comOffsetMeasured", comOffsetMeasured_);

@@ -614,6 +614,18 @@ struct MC_TASKS_DLLAPI StabilizerTask : public MetaTask
     return c_.extWrench;
   }
 
+  /** Update The Non linear proportional gain. */
+  void UpdateNonLinearPropGain()
+  {
+    Update_DCM_Gain = true;
+  }
+
+  /** Set a new convergence timing and update The Non linear proportional gain. */
+  void Set_Tconv(double t)
+  {
+    Tconv = t;
+  }
+
 private:
   void dimWeight(const Eigen::VectorXd & dimW) override;
   Eigen::VectorXd dimWeight() const override;
@@ -704,13 +716,6 @@ private:
 
   /** Update ZMP frame from contact state. */
   void updateZMPFrame();
-
-
-  /** Update The Non linear proportional gain. */
-  void UpdateNonLinearPropGain()
-  {
-    Update_DCM_Gain = true;
-  }
 
   /** Get 6D contact admittance vector from 2D CoP admittance. */
   inline sva::ForceVecd contactAdmittance() const noexcept
@@ -863,6 +868,7 @@ protected:
 
   bool Update_DCM_Gain = true; /** Trigger the update the Non linear prop gain  */
   bool nonLinearDCMCorrection = false;
+  double Tconv = 0.2; /**<Desired time convergence */
   double NonLinearDCM_PropGain_x = 1;
   double NonLinearDCM_PropGain_y = 1;
   double t_elapsed = 0; /** Time elapsed since previous gain update **/

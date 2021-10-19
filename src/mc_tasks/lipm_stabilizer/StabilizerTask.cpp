@@ -780,7 +780,7 @@ void StabilizerTask::run()
   torsoTask->orientation(mc_rbdyn::rpyToMat({0, c_.torsoPitch, 0}) * pelvisOrientation);
 
   t_elapsed += dt_;
-  if (t_elapsed > c_.Tconv)
+  if (t_elapsed > Tconv)
   {
     UpdateNonLinearPropGain();
     t_elapsed = 0;
@@ -876,8 +876,8 @@ sva::ForceVecd StabilizerTask::computeDesiredWrench()
 
     if (Update_DCM_Gain)
     {
-      NonLinearDCM_PropGain_x = - std::pow( std::abs(dcmError_.x()) , 1 - c_.NonLinear_exp ) / ( c_.Tconv * ( 1 - c_.NonLinear_exp ));
-      NonLinearDCM_PropGain_y = - std::pow( std::abs(dcmError_.y()) , 1 - c_.NonLinear_exp ) / ( c_.Tconv * ( 1 - c_.NonLinear_exp ));
+      NonLinearDCM_PropGain_x = - std::pow( std::abs(dcmError_.x()) , 1 - c_.NonLinear_exp ) / ( Tconv * ( 1 - c_.NonLinear_exp ));
+      NonLinearDCM_PropGain_y = - std::pow( std::abs(dcmError_.y()) , 1 - c_.NonLinear_exp ) / ( Tconv * ( 1 - c_.NonLinear_exp ));
       Update_DCM_Gain = false;
     }
     desiredCoMAccel += omega_ * (Eigen::Vector3d{ NonLinearDCM_PropGain_x * sgn_x * std::pow( std::abs(dcmError_.x()) , c_.NonLinear_exp ),

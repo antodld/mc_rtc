@@ -371,7 +371,7 @@ struct MC_RBDYN_DLLAPI StabilizerConfiguration
 
   // double dcmPropGain_NonLinear =  0.2 ; /**< Proportional gain on DCMerror to the power of NonLinear_exp */
   double NonLinear_exp = 0.5; /**<Exponant of the DCMerror */
-  double Tconv = 0.2; /**<Desired time convergence */
+  
 
 
   double dcmPropGain = 1.; /**< Proportional gain on DCM error */
