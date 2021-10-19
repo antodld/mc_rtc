@@ -725,7 +725,7 @@ void StabilizerTask::run()
   using clock = typename std::conditional<std::chrono::high_resolution_clock::is_steady,
                                           std::chrono::high_resolution_clock, std::chrono::steady_clock>::type;
   auto startTime = clock::now();
-
+  
   c_.clampGains();
   checkInTheAir();
   computeLeftFootRatio();
@@ -778,6 +778,13 @@ void StabilizerTask::run()
   Eigen::Matrix3d pelvisOrientation = X_0_a.rotation();
   pelvisTask->orientation(pelvisOrientation);
   torsoTask->orientation(mc_rbdyn::rpyToMat({0, c_.torsoPitch, 0}) * pelvisOrientation);
+
+  t_elapsed += dt_;
+  if (t_elapsed > c_.Tconv)
+  {
+    UpdateNonLinearPropGain();
+    t_elapsed = 0;
+  }
 
   auto endTime = clock::now();
   runTime_ = 1000. * duration_cast<duration<double>>(endTime - startTime).count();
@@ -858,7 +865,26 @@ sva::ForceVecd StabilizerTask::computeDesiredWrench()
   dcmVelError_ = dcmDerivator_.eval();
 
   Eigen::Vector3d desiredCoMAccel = comddTarget_;
-  desiredCoMAccel += omega_ * (c_.dcmPropGain * dcmError_ + c_.comdErrorGain * comdError);
+  if( !nonLinearDCMCorrection )
+  {
+    desiredCoMAccel += omega_ * (c_.dcmPropGain * dcmError_ + c_.comdErrorGain * comdError);
+  }
+  else
+  {
+    double sgn_x = -dcmError_.x()/std::abs(dcmError_.x()) ;
+    double sgn_y = -dcmError_.y()/std::abs(dcmError_.y()) ;
+
+    if (Update_DCM_Gain)
+    {
+      NonLinearDCM_PropGain_x = - std::pow( std::abs(dcmError_.x()) , 1 - c_.NonLinear_exp ) / ( c_.Tconv * ( 1 - c_.NonLinear_exp ));
+      NonLinearDCM_PropGain_y = - std::pow( std::abs(dcmError_.y()) , 1 - c_.NonLinear_exp ) / ( c_.Tconv * ( 1 - c_.NonLinear_exp ));
+      Update_DCM_Gain = false;
+    }
+    desiredCoMAccel += omega_ * (Eigen::Vector3d{ NonLinearDCM_PropGain_x * sgn_x * std::pow( std::abs(dcmError_.x()) , c_.NonLinear_exp ),
+                                                  NonLinearDCM_PropGain_y * sgn_y * std::pow( std::abs(dcmError_.y()) , c_.NonLinear_exp ),
+                                                  0.}
+                                + c_.comdErrorGain * comdError);
+  }
   desiredCoMAccel += omega_ * c_.dcmIntegralGain * dcmAverageError_;
   desiredCoMAccel += omega_ * c_.dcmDerivGain * dcmVelError_;
   desiredCoMAccel -= omega_ * omega_ * c_.zmpdGain * zmpdTarget_;

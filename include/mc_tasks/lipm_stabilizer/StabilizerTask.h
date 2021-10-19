@@ -705,6 +705,13 @@ private:
   /** Update ZMP frame from contact state. */
   void updateZMPFrame();
 
+
+  /** Update The Non linear proportional gain. */
+  void UpdateNonLinearPropGain()
+  {
+    Update_DCM_Gain = true;
+  }
+
   /** Get 6D contact admittance vector from 2D CoP admittance. */
   inline sva::ForceVecd contactAdmittance() const noexcept
   {
@@ -853,6 +860,12 @@ protected:
    * update(solver) call */
   bool reconfigure_ = true;
   bool enabled_ = true; /** Whether the stabilizer is enabled */
+
+  bool Update_DCM_Gain = true; /** Trigger the update the Non linear prop gain  */
+  bool nonLinearDCMCorrection = false;
+  double NonLinearDCM_PropGain_x = 1;
+  double NonLinearDCM_PropGain_y = 1;
+  double t_elapsed = 0; /** Time elapsed since previous gain update **/
 
   Eigen::QuadProgDense qpSolver_; /**< Least-squares solver for wrench distribution */
   Eigen::Vector3d dcmAverageError_ = Eigen::Vector3d::Zero();
