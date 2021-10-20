@@ -867,7 +867,8 @@ protected:
   bool enabled_ = true; /** Whether the stabilizer is enabled */
 
   bool Update_DCM_Gain = true; /** Trigger the update the Non linear prop gain  */
-  bool nonLinearDCMCorrection = false;
+  bool Continuous_Update_DCM_Gain = false; /** update the Non linear prop gain at each iterations  */
+  bool nonLinearDCMCorrection = false; /** Enable the Non Linear DCM correction */
   double Tconv = 0.2; /**<Desired time convergence */
   double NonLinearDCM_PropGain_x = 1;
   double NonLinearDCM_PropGain_y = 1;
