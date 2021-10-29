@@ -614,12 +614,6 @@ struct MC_TASKS_DLLAPI StabilizerTask : public MetaTask
     return c_.extWrench;
   }
 
-  /** Update The Non linear proportional gain. */
-  void UpdateNonLinearPropGain()
-  {
-    Update_DCM_Gain = true;
-  }
-
   /** Set a new convergence timing and update The Non linear proportional gain. */
   void Set_Tconv(double t)
   {
@@ -866,13 +860,10 @@ protected:
   bool reconfigure_ = true;
   bool enabled_ = true; /** Whether the stabilizer is enabled */
 
-  bool Update_DCM_Gain = true; /** Trigger the update the Non linear prop gain  */
-  bool Continuous_Update_DCM_Gain = false; /** update the Non linear prop gain at each iterations  */
   bool nonLinearDCMCorrection = false; /** Enable the Non Linear DCM correction */
   double Tconv = 0.2; /**<Desired time convergence */
   double NonLinearDCM_PropGain_x = 1;
   double NonLinearDCM_PropGain_y = 1;
-  double t_elapsed = 0; /** Time elapsed since previous gain update **/
 
   Eigen::QuadProgDense qpSolver_; /**< Least-squares solver for wrench distribution */
   Eigen::Vector3d dcmAverageError_ = Eigen::Vector3d::Zero();

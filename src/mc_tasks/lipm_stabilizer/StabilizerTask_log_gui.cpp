@@ -186,10 +186,6 @@ void StabilizerTask::addToGUI(mc_rtc::gui::StateBuilder & gui)
                  Checkbox(
                      "Use Non Linear Correction", [this]() { return nonLinearDCMCorrection; },
                      [this]() { nonLinearDCMCorrection = !nonLinearDCMCorrection; }),
-                 Checkbox(
-                     "Continuous Update", [this]() { return Continuous_Update_DCM_Gain; },
-                     [this]() { Continuous_Update_DCM_Gain = !Continuous_Update_DCM_Gain; }),
-                 Button("Update Gain", [this]() { UpdateNonLinearPropGain(); }),
                  ArrayLabel("Gains", {"x", "y"}, [this]() { return Eigen::Vector2d{NonLinearDCM_PropGain_x,NonLinearDCM_PropGain_y}; }),
                  NumberInput(
                      "Exponant", [this]() { return c_.NonLinear_exp; },
