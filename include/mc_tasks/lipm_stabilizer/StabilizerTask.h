@@ -648,7 +648,7 @@ private:
    * \param com Position of the center of mass.
    *
    * \param comd Velocity of the center of mass.
-   * 
+   *
    * \param comdd Acceleration of the center of mass.
    */
   void updateState(const Eigen::Vector3d & com, const Eigen::Vector3d & comd, const Eigen::Vector3d & comdd);
