@@ -34,7 +34,6 @@ struct LowPassCompose
     return cutoffPeriod_;
   }
 
-
   /** Set cutoff period.
    *
    * \param period New cutoff period.
@@ -52,7 +51,6 @@ struct LowPassCompose
     cutoffPeriod_ = period;
   }
 
-
   /** Reset position to an initial rest value.
    *
    * \param pos New position.
@@ -66,22 +64,21 @@ struct LowPassCompose
   /** Update estimate from new two sources
    *
    * \param newValue_hp New observed value filtered throught high pass.
-   * 
+   *
    * \param newValue_lp New observed value filtered throught low pass.
    *
    */
-  void update(const T & newValue_hp , const T & newValue_lp)
+  void update(const T & newValue_hp, const T & newValue_lp)
   {
     double x = (cutoffPeriod_ <= dt_) ? 1. : dt_ / cutoffPeriod_;
 
     eval_lp_ = x * newValue_lp + (1. - x) * eval_lp_;
-    eval_hp_ = newValue_hp - x * newValue_hp + (1. - x) * eval_hp_; 
+    eval_hp_ = newValue_hp - x * newValue_hp + (1. - x) * eval_hp_;
 
     eval_ = eval_hp_ + eval_lp_;
-    
+
     value_hp_ = newValue_hp;
     value_lp_ = newValue_lp;
-
   }
 
   /** Get filtered velocity.

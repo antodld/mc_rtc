@@ -791,7 +791,7 @@ sva::ForceVecd StabilizerTask::computeDesiredWrench()
   Eigen::Vector3d comError = comTarget_ - measuredCoM_;
   Eigen::Vector3d comdError = comdTarget_ - measuredCoMd_;
 
-  Eigen::Vector3d delta_dcmError = (comError + comdError / omega_) - dcmError_; 
+  Eigen::Vector3d delta_dcmError = (comError + comdError / omega_) - dcmError_;
   delta_dcmError.z() = 0.;
   dcmError_ = comError + comdError / omega_;
   dcmError_.z() = 0.;
@@ -863,13 +863,12 @@ sva::ForceVecd StabilizerTask::computeDesiredWrench()
       dcmEstimatorNeedsReset_ = true;
     }
 
-    dcmDerivator_.update(omega_ * (dcmError_ - zmpError),delta_dcmError/dt_);
+    dcmDerivator_.update(omega_ * (dcmError_ - zmpError), delta_dcmError / dt_);
     dcmVelError_ = omega_ * (dcmError_ - zmpError);
     dcmIntegrator_.append(dcmError_);
   }
   dcmAverageError_ = dcmIntegrator_.eval();
   // dcmVelError_ = dcmDerivator_.eval();
-  
 
   Eigen::Vector3d desiredCoMAccel = comddTarget_;
   desiredCoMAccel += omega_ * (c_.dcmPropGain * dcmError_ + c_.comdErrorGain * comdError);
