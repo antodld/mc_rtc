@@ -343,13 +343,14 @@ class PlotYAxis(object):
     if not len(self):
       return None, None
     def getRange(value, i0 = None, iN = None):
-      first = 0
+      first, last = 0, 0
       if self._3D:
         check = np.nonzero(np.isfinite(value[0] + value[1] + value[2]))
       else:
         check = np.nonzero(np.isfinite(value[0] + value[1]))
-      first = check[0][0]
-      last = check[0][-1]
+      if len(check[0]):
+        first = check[0][0]
+        last = check[0][-1]
       if i0 is None:
         return first, last
       return min(i0, first), max(iN, last)
@@ -429,7 +430,7 @@ class PlotYAxis(object):
       self.plots[y_label].set_data(self.data[y_label][0][frame0:frame], self.data[y_label][1][frame0:frame])
       if self._3D:
         self.plots[y_label].set_3d_properties(self.data[y_label][2][frame0:frame])
-    return self.plots.values()
+    return list(self.plots.values())
 
   def update_x(self, x):
     styles = {}

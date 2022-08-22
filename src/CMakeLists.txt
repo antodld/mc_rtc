@@ -13,6 +13,9 @@ endif()
 
 macro(install_mc_rtc_lib_common MC_LIB KWD)
   target_include_directories(${MC_LIB} INTERFACE $<INSTALL_INTERFACE:include> $<BUILD_INTERFACE:${MC_RTC_INCLUDE_DIR}>)
+  if(MSVC)
+    target_compile_options(${MC_LIB} ${KWD} /source-charset:utf-8)
+  endif()
   if(NOT EMSCRIPTEN)
     if(WIN32)
       target_compile_definitions(${MC_LIB} ${KWD} "-DNOMINMAX"  "-D_ENABLE_EXTENDED_ALIGNED_STORAGE")
@@ -225,6 +228,7 @@ set(mc_rbdyn_HDR
 ../include/mc_rbdyn/Device.h
 ../include/mc_rbdyn/Frame.h
 ../include/mc_rbdyn/RobotFrame.h
+../include/mc_rbdyn/JointSensor.h
 )
 
 add_library(mc_rbdyn SHARED ${mc_rbdyn_SRC} ${mc_rbdyn_HDR})
