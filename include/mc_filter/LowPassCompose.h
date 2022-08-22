@@ -59,6 +59,8 @@ struct LowPassCompose
   void reset(const T & value)
   {
     eval_ = value;
+    eval_hp_ = eval_;
+    eval_lp_ = eval_;
   }
 
   /** Update estimate from new two sources
@@ -72,11 +74,19 @@ struct LowPassCompose
   {
     double x = (cutoffPeriod_ <= dt_) ? 1. : dt_ / cutoffPeriod_;
 
+    // Update the low pass filter
     eval_lp_ = x * newValue_lp + (1. - x) * eval_lp_;
-    eval_hp_ = newValue_hp - x * newValue_hp + (1. - x) * eval_hp_;
 
-    eval_ = eval_hp_ + eval_lp_;
+    // Update the high pass filter output
+    T eval_hp = (newValue_hp - eval_hp_);
 
+    // Summation of both components
+    eval_ = eval_hp + eval_lp_;
+
+    // Update high pass filter state
+    eval_hp_ = (x * newValue_hp + (1. - x) * eval_hp_);
+
+    // Use for logs
     value_hp_ = newValue_hp;
     value_lp_ = newValue_lp;
   }

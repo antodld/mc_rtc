@@ -866,11 +866,10 @@ sva::ForceVecd StabilizerTask::computeDesiredWrench()
     }
 
     dcmDerivator_.update(omega_ * (dcmError_ - zmpError), delta_dcmError / dt_);
-    dcmVelError_ = omega_ * (dcmError_ - zmpError);
     dcmIntegrator_.append(dcmError_);
   }
   dcmAverageError_ = dcmIntegrator_.eval();
-  // dcmVelError_ = dcmDerivator_.eval();
+  dcmVelError_ = dcmDerivator_.eval();
 
   Eigen::Vector3d desiredCoMAccel = comddTarget_;
   desiredCoMAccel += omega_ * (c_.dcmPropGain * dcmError_ + c_.comdErrorGain * comdError);
