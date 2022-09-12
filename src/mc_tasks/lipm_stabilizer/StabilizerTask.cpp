@@ -739,7 +739,8 @@ void StabilizerTask::run()
     }
     catch(std::runtime_error & e)
     {
-      mc_rtc::log::error("[{}] ZMP computation failed, keeping previous value {}", name(), measuredZMP_.transpose());
+      mc_rtc::log::error("[{}] ZMP computation failed, keeping previous value {}", name(),
+                         MC_FMT_STREAMED(measuredZMP_.transpose()));
     }
   }
   else
@@ -978,6 +979,7 @@ void StabilizerTask::distributeWrench(const sva::ForceVecd & desiredWrench)
   const sva::PTransformd & X_0_rc = rightContact.surfacePose();
   const sva::PTransformd & X_0_lankle = leftContact.anklePose();
   const sva::PTransformd & X_0_rankle = rightContact.anklePose();
+  sva::PTransformd X_0_zmp(zmpTarget_);
 
   constexpr unsigned NB_VAR = 6 + 6;
   constexpr unsigned COST_DIM = 6 + NB_VAR + 1;
@@ -986,12 +988,14 @@ void StabilizerTask::distributeWrench(const sva::ForceVecd & desiredWrench)
   A.setZero(COST_DIM, NB_VAR);
   b.setZero(COST_DIM);
 
-  // |w_l_0 + w_r_0 - desiredWrench|^2
+  // |w_l_zmp + w_r_zmp - desiredWrench|^2
+  // We handle moments around the ZMP instead of the world origin to avoid numerical errors due to large moment values.
+  // https://github.com/jrl-umi3218/mc_rtc/pull/285
   auto A_net = A.block<6, 12>(0, 0);
   auto b_net = b.segment<6>(0);
-  A_net.block<6, 6>(0, 0) = Eigen::Matrix6d::Identity();
-  A_net.block<6, 6>(0, 6) = Eigen::Matrix6d::Identity();
-  b_net = desiredWrench.vector();
+  A_net.block<6, 6>(0, 0) = X_0_zmp.dualMatrix();
+  A_net.block<6, 6>(0, 6) = X_0_zmp.dualMatrix();
+  b_net = X_0_zmp.dualMul(desiredWrench).vector();
 
   // |ankle torques|^2
   auto A_lankle = A.block<6, 6>(6, 0);
@@ -1146,10 +1150,19 @@ void StabilizerTask::updateFootForceDifferenceControl()
     return;
   }
 
-  double LFz_d = leftFootTask->targetWrench().force().z();
-  double RFz_d = rightFootTask->targetWrench().force().z();
-  double LFz = leftFootTask->measuredWrench().force().z();
-  double RFz = rightFootTask->measuredWrench().force().z();
+  sva::PTransformd T_0_L(leftFootTask->surfacePose().rotation());
+  sva::PTransformd T_0_R(rightFootTask->surfacePose().rotation());
+
+  // In what follows, vertical foot forces are expressed in their respective
+  // foot sole frames, but foot force difference control expects them to be
+  // written in the world frame, so the following lines are wrong (they miss a
+  // frame transform). Thanks to @Saeed-Mansouri for pointing out this bug
+  // <https://github.com/stephane-caron/lipm_walking_controller/discussions/72>.
+  // T_0_{L/R}.transMul transforms a ForceVecd variable from surface frame to world frame
+  double LFz_d = T_0_L.transMul(leftFootTask->targetWrench()).force().z();
+  double RFz_d = T_0_R.transMul(rightFootTask->targetWrench()).force().z();
+  double LFz = T_0_L.transMul(leftFootTask->measuredWrench()).force().z();
+  double RFz = T_0_R.transMul(rightFootTask->measuredWrench()).force().z();
   dfzForceError_ = (LFz_d - RFz_d) - (LFz - RFz);
 
   double LTz_d = leftFootTask->targetPose().translation().z();
@@ -1163,8 +1176,9 @@ void StabilizerTask::updateFootForceDifferenceControl()
   double dz_vdc = c_.vdcFrequency * vdcHeightError_;
   sva::MotionVecd velF = {{0., 0., 0.}, {0., 0., dz_ctrl}};
   sva::MotionVecd velT = {{0., 0., 0.}, {0., 0., dz_vdc}};
-  leftFootTask->refVelB(0.5 * (velT - velF));
-  rightFootTask->refVelB(0.5 * (velT + velF));
+  // T_0_{L/R} transforms a MotionVecd variable from world frame to surface frame
+  leftFootTask->refVelB(0.5 * (T_0_L * (velT - velF)));
+  rightFootTask->refVelB(0.5 * (T_0_R * (velT + velF)));
 }
 
 template Eigen::Vector3d StabilizerTask::computeCoMOffset<&StabilizerTask::ExternalWrench::target>(
