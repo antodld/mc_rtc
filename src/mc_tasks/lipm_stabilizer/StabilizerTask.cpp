@@ -732,12 +732,8 @@ void StabilizerTask::run()
   if(!inTheAir_)
   {
     measuredNetWrench_ = robots_.robot(robotIndex_).netWrench(contactSensors);
-    try
-    {
-      measuredZMP_ =
-          robots_.robot(robotIndex_).zmp(measuredNetWrench_, zmpFrame_, c_.safetyThresholds.MIN_NET_TOTAL_FORCE_ZMP);
-    }
-    catch(std::runtime_error & e)
+    if(!robots_.robot(robotIndex_)
+            .zmp(measuredZMP_, measuredNetWrench_, zmpFrame_, c_.safetyThresholds.MIN_NET_TOTAL_FORCE_ZMP))
     {
       mc_rtc::log::error("[{}] ZMP computation failed, keeping previous value {}", name(),
                          MC_FMT_STREAMED(measuredZMP_.transpose()));
@@ -774,7 +770,7 @@ void StabilizerTask::run()
 
   // Update orientation tasks according to feet orientation
   sva::PTransformd X_0_a = anchorFrame(robot());
-  Eigen::Matrix3d pelvisOrientation = X_0_a.rotation();
+  Eigen::Matrix3d pelvisOrientation = sva::RotZ(mc_rbdyn::rpyFromMat(X_0_a.rotation())[2]);
   pelvisTask->orientation(pelvisOrientation);
   torsoTask->orientation(mc_rbdyn::rpyToMat({0, c_.torsoPitch, 0}) * pelvisOrientation);
 
