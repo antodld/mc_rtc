@@ -1206,7 +1206,7 @@ void StabilizerTask::saturateWrench(const sva::ForceVecd & desiredWrench,
 
 }
 
-void staturateWrench(const sva::ForceVecd & w_c_cc,
+void saturateWrench(const sva::ForceVecd & w_c_cc,
                     std::shared_ptr<mc_tasks::force::CoPTask> & footTask)
 {
   Eigen::Vector2d cop = (constants::vertical.cross(w_c_cc.couple()) / w_c_cc.force()(2)).head<2>();

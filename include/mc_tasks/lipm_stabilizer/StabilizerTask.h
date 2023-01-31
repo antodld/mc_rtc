@@ -803,7 +803,7 @@ private:
                       std::shared_ptr<mc_tasks::force::CoPTask> & footTask,
                       const internal::Contact & contact);
   
-  void staturateWrench(const sva::ForceVecd & w_c_cc,
+  void saturateWrench(const sva::ForceVecd & w_c_cc,
                       std::shared_ptr<mc_tasks::force::CoPTask> & footTask);
 
   /** Reset admittance, damping and stiffness for every foot in contact. */
