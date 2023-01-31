@@ -392,6 +392,18 @@ struct MC_TASKS_DLLAPI StabilizerTask : public MetaTask
   void setExternalWrenches(const std::vector<std::string> & surfaceNames,
                            const std::vector<sva::ForceVecd> & targetWrenches,
                            const std::vector<sva::MotionVecd> & gains);
+  
+
+  /**
+  *  @brief Set directly a set of wrench to apply
+  *  The wrenches will be applied only if the contact exist
+  * 
+  * @param w_l_lc Leftfoot wrench in the foot center frame
+  * 
+  * @param w_r_rc Rightfoot wrench in the foot center frame
+  * 
+  */
+  void setManualWrench(const sva::ForceVecd & w_l_lc, const sva::ForceVecd & w_r_rc);
 
   /* Return the current external wrenches targets
    *
@@ -777,6 +789,8 @@ private:
    */
   void distributeWrench(const sva::ForceVecd & desiredWrench);
 
+  void distributeWrench(const sva::ForceVecd & w_l_lc, const sva::ForceVecd & w_r_rc);
+
   /** Project desired wrench to single support foot.
    *
    * \param desiredWrench Desired resultant reaction wrench.
@@ -788,6 +802,9 @@ private:
   void saturateWrench(const sva::ForceVecd & desiredWrench,
                       std::shared_ptr<mc_tasks::force::CoPTask> & footTask,
                       const internal::Contact & contact);
+  
+  void staturateWrench(const sva::ForceVecd & w_c_cc,
+                      std::shared_ptr<mc_tasks::force::CoPTask> & footTask);
 
   /** Reset admittance, damping and stiffness for every foot in contact. */
   void setSupportFootGains();
@@ -954,6 +971,10 @@ protected:
    * update(solver) call */
   bool reconfigure_ = true;
   bool enabled_ = true; /** Whether the stabilizer is enabled */
+
+  bool manual_wrench_ = false; /**set to true when a custom wrench target is set by the user*/
+  sva::ForceVecd manual_w_l_lc_ = sva::ForceVecd::Zero();
+  sva::ForceVecd manual_w_r_rc_ = sva::ForceVecd::Zero();
 
   Eigen::QuadProgDense qpSolver_; /**< Least-squares solver for wrench distribution */
   Eigen::Vector3d dcmAverageError_ = Eigen::Vector3d::Zero();

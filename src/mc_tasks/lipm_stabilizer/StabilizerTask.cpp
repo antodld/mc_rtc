@@ -639,6 +639,13 @@ void StabilizerTask::target(const Eigen::Vector3d & com,
   dcmTarget_ = comTarget_ + comdTarget_ / omega_;
 }
 
+void StabilizerTask::setManualWrench(const sva::ForceVecd & w_l_lc, const sva::ForceVecd & w_r_rc)
+{
+  manual_w_l_lc_ = w_l_lc;
+  manual_w_r_rc_ = w_r_rc;
+  manual_wrench_ = true;
+}
+
 void StabilizerTask::setExternalWrenches(const std::vector<std::string> & surfaceNames,
                                          const std::vector<sva::ForceVecd> & targetWrenches,
                                          const std::vector<sva::MotionVecd> & gains)
@@ -767,22 +774,36 @@ void StabilizerTask::run()
   {
     measuredNetWrench_ = sva::ForceVecd::Zero();
   }
-  desiredWrench_ = computeDesiredWrench();
+  if(!manual_wrench_)
+  {
+    desiredWrench_ = computeDesiredWrench();
+  }
+  else
+  {
+    desiredWrench_ = contacts_.at(ContactState::Left).surfacePose().inv().dualMul(manual_w_l_lc_) +
+                     contacts_.at(ContactState::Right).surfacePose().inv().dualMul(manual_w_r_rc_);
+  }
 
   if(inDoubleSupport())
   {
-    distributeWrench(desiredWrench_);
+    if(!manual_wrench_){distributeWrench(desiredWrench_);}
+    else{distributeWrench(manual_w_l_lc_,manual_w_r_rc_);}
   }
   else if(inContact(ContactState::Left))
   {
-    saturateWrench(desiredWrench_, footTasks[ContactState::Left], contacts_.at(ContactState::Left));
+    if(!manual_wrench_){saturateWrench(desiredWrench_, footTasks[ContactState::Left], contacts_.at(ContactState::Left));}
+    else{saturateWrench(manual_w_l_lc_,footTasks[ContactState::Left]);}
     footTasks[ContactState::Right]->setZeroTargetWrench();
   }
   else
   {
-    saturateWrench(desiredWrench_, footTasks[ContactState::Right], contacts_.at(ContactState::Right));
+    if(!manual_wrench_){saturateWrench(desiredWrench_, footTasks[ContactState::Right], contacts_.at(ContactState::Right));}
+    else{saturateWrench(manual_w_r_rc_,footTasks[ContactState::Right]);}
     footTasks[ContactState::Left]->setZeroTargetWrench();
   }
+  
+  manual_wrench_ = false;
+
 
   distribZMP_ = mc_rbdyn::zmp(distribWrench_, zmpFrame_);
   updateCoMTaskZMPCC();
@@ -1116,16 +1137,24 @@ void StabilizerTask::distributeWrench(const sva::ForceVecd & desiredWrench)
   Eigen::VectorXd x = qpSolver_.result();
   sva::ForceVecd w_l_0(x.segment<3>(0), x.segment<3>(3));
   sva::ForceVecd w_r_0(x.segment<3>(6), x.segment<3>(9));
-  distribWrench_ = w_l_0 + w_r_0;
 
   sva::ForceVecd w_l_lc = X_0_lc.dualMul(w_l_0);
   sva::ForceVecd w_r_rc = X_0_rc.dualMul(w_r_0);
+  distributeWrench(w_l_lc,w_r_rc);
+
+}
+
+void StabilizerTask::distributeWrench(const sva::ForceVecd & w_l_lc, const sva::ForceVecd & w_r_rc)
+{
   Eigen::Vector2d leftCoP = (constants::vertical.cross(w_l_lc.couple()) / w_l_lc.force()(2)).head<2>();
   Eigen::Vector2d rightCoP = (constants::vertical.cross(w_r_rc.couple()) / w_r_rc.force()(2)).head<2>();
   footTasks[ContactState::Left]->targetCoP(leftCoP);
   footTasks[ContactState::Left]->targetForce(w_l_lc.force());
   footTasks[ContactState::Right]->targetCoP(rightCoP);
   footTasks[ContactState::Right]->targetForce(w_r_rc.force());
+
+  distribWrench_ = contacts_.at(ContactState::Left).surfacePose().inv().dualMul(w_l_lc) + 
+                    contacts_.at(ContactState::Right).surfacePose().inv().dualMul(w_r_rc);
 }
 
 void StabilizerTask::saturateWrench(const sva::ForceVecd & desiredWrench,
@@ -1173,11 +1202,18 @@ void StabilizerTask::saturateWrench(const sva::ForceVecd & desiredWrench,
   Eigen::VectorXd x = qpSolver_.result();
   sva::ForceVecd w_0(x.head<3>(), x.tail<3>());
   sva::ForceVecd w_c = X_0_c.dualMul(w_0);
-  Eigen::Vector2d cop = (constants::vertical.cross(w_c.couple()) / w_c.force()(2)).head<2>();
-  footTask->targetCoP(cop);
-  footTask->targetForce(w_c.force());
-  distribWrench_ = w_0;
+  saturateWrench(w_c);
+
 }
+
+void staturateWrench(const sva::ForceVecd & w_c_cc,
+                    std::shared_ptr<mc_tasks::force::CoPTask> & footTask)
+{
+  Eigen::Vector2d cop = (constants::vertical.cross(w_c_cc.couple()) / w_c_cc.force()(2)).head<2>();
+  footTask->targetCoP(cop);
+  footTask->targetForce(w_c_cc.force());
+  distribWrench_ = footTask->surfacePose().inv().dualMul(w_c_cc);
+} 
 
 void StabilizerTask::updateCoMTaskZMPCC()
 {
