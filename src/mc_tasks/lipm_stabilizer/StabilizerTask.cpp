@@ -1236,18 +1236,21 @@ void StabilizerTask::saturateWrench(const sva::ForceVecd & desiredWrench,
   Eigen::VectorXd x = qpSolver_.result();
   sva::ForceVecd w_0(x.head<3>(), x.tail<3>());
   sva::ForceVecd w_c = X_0_c.dualMul(w_0);
-  saturateWrench(w_c);
-
+  saturateWrench(w_c, footTask);
 }
 
-void saturateWrench(const sva::ForceVecd & w_c_cc,
-                    std::shared_ptr<mc_tasks::force::CoPTask> & footTask)
+void StabilizerTask::saturateWrench(const sva::ForceVecd & w_c_cc, std::shared_ptr<mc_tasks::force::CoPTask> & footTask)
 {
   Eigen::Vector2d cop = (constants::vertical.cross(w_c_cc.couple()) / w_c_cc.force()(2)).head<2>();
+  if(std::abs(w_c_cc.force().z()) < 10)
+  {
+    cop.setZero();
+  }
   footTask->targetCoP(cop);
   footTask->targetForce(w_c_cc.force());
+
   distribWrench_ = footTask->surfacePose().inv().dualMul(w_c_cc);
-} 
+}
 
 void StabilizerTask::updateCoMTaskZMPCC()
 {
@@ -1269,7 +1272,14 @@ void StabilizerTask::updateFootForceDifferenceControl()
 {
   auto leftFootTask = footTasks[ContactState::Left];
   auto rightFootTask = footTasks[ContactState::Right];
-  if(!inDoubleSupport() || inTheAir_)
+
+  sva::PTransformd T_0_L(leftFootTask->surfacePose().rotation());
+  sva::PTransformd T_0_R(rightFootTask->surfacePose().rotation());
+
+  // T_0_{L/R}.transMul transforms a ForceVecd variable from surface frame to world frame
+  Eigen::Vector3d LF_d = T_0_L.transMul(leftFootTask->targetWrench()).force();
+  Eigen::Vector3d RF_d = T_0_R.transMul(rightFootTask->targetWrench()).force();
+  if(!inDoubleSupport() || inTheAir_ || LF_d.norm() < 10 || RF_d.norm() < 10)
   {
     dfForceError_ = Eigen::Vector3d::Zero();
     dfError_ = Eigen::Vector3d::Zero();
@@ -1279,16 +1289,10 @@ void StabilizerTask::updateFootForceDifferenceControl()
     return;
   }
 
-  sva::PTransformd T_0_L(leftFootTask->surfacePose().rotation());
-  sva::PTransformd T_0_R(rightFootTask->surfacePose().rotation());
-
   /// The gains along the axis are defined in the local cordinates so we extract the yaw
   /// rotation matrix
   Eigen::Matrix3d R_0_fb_yaw = sva::RotZ(mc_rbdyn::rpyFromMat(robot().posW().rotation()).z());
 
-  // T_0_{L/R}.transMul transforms a ForceVecd variable from surface frame to world frame
-  Eigen::Vector3d LF_d = T_0_L.transMul(leftFootTask->targetWrench()).force();
-  Eigen::Vector3d RF_d = T_0_R.transMul(rightFootTask->targetWrench()).force();
   Eigen::Vector3d LF = T_0_L.transMul(leftFootTask->measuredWrench()).force();
   Eigen::Vector3d RF = T_0_R.transMul(rightFootTask->measuredWrench()).force();
   dfForceError_ = (LF_d - RF_d) - (LF - RF);
