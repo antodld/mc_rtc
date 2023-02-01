@@ -392,17 +392,16 @@ struct MC_TASKS_DLLAPI StabilizerTask : public MetaTask
   void setExternalWrenches(const std::vector<std::string> & surfaceNames,
                            const std::vector<sva::ForceVecd> & targetWrenches,
                            const std::vector<sva::MotionVecd> & gains);
-  
 
   /**
-  *  @brief Set directly a set of wrench to apply
-  *  The wrenches will be applied only if the contact exist
-  * 
-  * @param w_l_lc Leftfoot wrench in the foot center frame
-  * 
-  * @param w_r_rc Rightfoot wrench in the foot center frame
-  * 
-  */
+   *  @brief Set directly a set of wrench to apply
+   *  The wrenches will be applied only if the contact exist
+   *
+   * @param w_l_lc Leftfoot wrench in the foot center frame
+   *
+   * @param w_r_rc Rightfoot wrench in the foot center frame
+   *
+   */
   void setManualWrench(const sva::ForceVecd & w_l_lc, const sva::ForceVecd & w_r_rc);
 
   /* Return the current external wrenches targets
@@ -802,9 +801,8 @@ private:
   void saturateWrench(const sva::ForceVecd & desiredWrench,
                       std::shared_ptr<mc_tasks::force::CoPTask> & footTask,
                       const internal::Contact & contact);
-  
-  void saturateWrench(const sva::ForceVecd & w_c_cc,
-                      std::shared_ptr<mc_tasks::force::CoPTask> & footTask);
+
+  void saturateWrench(const sva::ForceVecd & w_c_cc, std::shared_ptr<mc_tasks::force::CoPTask> & footTask);
 
   /** Reset admittance, damping and stiffness for every foot in contact. */
   void setSupportFootGains();

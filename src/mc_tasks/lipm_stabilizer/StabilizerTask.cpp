@@ -778,32 +778,59 @@ void StabilizerTask::run()
   {
     desiredWrench_ = computeDesiredWrench();
   }
-  else
-  {
-    desiredWrench_ = contacts_.at(ContactState::Left).surfacePose().inv().dualMul(manual_w_l_lc_) +
-                     contacts_.at(ContactState::Right).surfacePose().inv().dualMul(manual_w_r_rc_);
-  }
 
   if(inDoubleSupport())
   {
-    if(!manual_wrench_){distributeWrench(desiredWrench_);}
-    else{distributeWrench(manual_w_l_lc_,manual_w_r_rc_);}
+    if(manual_wrench_ && (manual_w_l_lc_ == sva::ForceVecd::Zero()))
+    {
+      manual_wrench_ = false;
+      mc_rtc::log::warning("[{}] Left Wrench is not defined, distributing right wrench", name());
+      desiredWrench_ = contacts_.at(ContactState::Right).surfacePose().inv().dualMul(manual_w_r_rc_);
+    }
+    if(manual_wrench_ && (manual_w_r_rc_ == sva::ForceVecd::Zero()))
+    {
+      manual_wrench_ = false;
+      mc_rtc::log::warning("[{}] Right Wrench is not defined, distributing left wrench", name());
+      desiredWrench_ = contacts_.at(ContactState::Left).surfacePose().inv().dualMul(manual_w_l_lc_);
+    }
+    if(!manual_wrench_)
+    {
+      distributeWrench(desiredWrench_);
+    }
+    else
+    {
+      distributeWrench(manual_w_l_lc_, manual_w_r_rc_);
+      desiredWrench_ = distribWrench_;
+    }
   }
   else if(inContact(ContactState::Left))
   {
-    if(!manual_wrench_){saturateWrench(desiredWrench_, footTasks[ContactState::Left], contacts_.at(ContactState::Left));}
-    else{saturateWrench(manual_w_l_lc_,footTasks[ContactState::Left]);}
+    if(!manual_wrench_)
+    {
+      saturateWrench(desiredWrench_, footTasks[ContactState::Left], contacts_.at(ContactState::Left));
+    }
+    else
+    {
+      saturateWrench(manual_w_l_lc_, footTasks[ContactState::Left]);
+      desiredWrench_ = distribWrench_;
+    }
     footTasks[ContactState::Right]->setZeroTargetWrench();
   }
   else
   {
-    if(!manual_wrench_){saturateWrench(desiredWrench_, footTasks[ContactState::Right], contacts_.at(ContactState::Right));}
-    else{saturateWrench(manual_w_r_rc_,footTasks[ContactState::Right]);}
+    if(!manual_wrench_)
+    {
+      saturateWrench(desiredWrench_, footTasks[ContactState::Right], contacts_.at(ContactState::Right));
+      desiredWrench_ = distribWrench_;
+    }
+    else
+    {
+      saturateWrench(manual_w_r_rc_, footTasks[ContactState::Right]);
+    }
     footTasks[ContactState::Left]->setZeroTargetWrench();
   }
-  
-  manual_wrench_ = false;
 
+  manual_wrench_ = false;
 
   distribZMP_ = mc_rbdyn::zmp(distribWrench_, zmpFrame_);
   updateCoMTaskZMPCC();
@@ -1140,21 +1167,28 @@ void StabilizerTask::distributeWrench(const sva::ForceVecd & desiredWrench)
 
   sva::ForceVecd w_l_lc = X_0_lc.dualMul(w_l_0);
   sva::ForceVecd w_r_rc = X_0_rc.dualMul(w_r_0);
-  distributeWrench(w_l_lc,w_r_rc);
-
+  distributeWrench(w_l_lc, w_r_rc);
 }
 
 void StabilizerTask::distributeWrench(const sva::ForceVecd & w_l_lc, const sva::ForceVecd & w_r_rc)
 {
   Eigen::Vector2d leftCoP = (constants::vertical.cross(w_l_lc.couple()) / w_l_lc.force()(2)).head<2>();
+  if(std::abs(w_l_lc.force().z()) < 10)
+  {
+    leftCoP.setZero();
+  }
   Eigen::Vector2d rightCoP = (constants::vertical.cross(w_r_rc.couple()) / w_r_rc.force()(2)).head<2>();
+  if(std::abs(w_r_rc.force().z()) < 10)
+  {
+    rightCoP.setZero();
+  }
   footTasks[ContactState::Left]->targetCoP(leftCoP);
   footTasks[ContactState::Left]->targetForce(w_l_lc.force());
   footTasks[ContactState::Right]->targetCoP(rightCoP);
   footTasks[ContactState::Right]->targetForce(w_r_rc.force());
 
-  distribWrench_ = contacts_.at(ContactState::Left).surfacePose().inv().dualMul(w_l_lc) + 
-                    contacts_.at(ContactState::Right).surfacePose().inv().dualMul(w_r_rc);
+  distribWrench_ = contacts_.at(ContactState::Left).surfacePose().inv().dualMul(w_l_lc)
+                   + contacts_.at(ContactState::Right).surfacePose().inv().dualMul(w_r_rc);
 }
 
 void StabilizerTask::saturateWrench(const sva::ForceVecd & desiredWrench,
