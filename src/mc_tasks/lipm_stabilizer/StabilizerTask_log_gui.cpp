@@ -310,6 +310,96 @@ void StabilizerTask::addToGUI(mc_rtc::gui::StateBuilder & gui)
                         }),
                  Button("Stop DCM Derivator", [&gui]() { gui.removePlot("DCM Derivator"); }));
 
+  gui.addElement({"Tasks", name_, "Debug"}, ElementsStacking::Horizontal,
+                 Button("Plot Left CoP Model Tracking (y)",
+                        [this, &gui]() {
+                          gui.addPlot(
+                              "Left CoP Model Tracking (y)", plot::X("t", [this]() { return t_; }),
+                              plot::Y(
+                                  "support_min", [this]() { 
+                                        if(inContact(ContactState::Left))
+                                        {
+                                          const auto & contact = contacts_.at(ContactState::Left);
+                                          return -contact.halfWidth();
+                                        }
+                                        return 0.;
+                                  }, Color::Red),
+                              plot::Y(
+                                  "support_max", [this]() { 
+                                        if(inContact(ContactState::Left))
+                                        {
+                                          const auto & contact = contacts_.at(ContactState::Left);
+                                          return contact.halfWidth();
+                                        }
+                                        return 0.;
+                                  }, Color::Red),
+                              plot::Y(
+                                  "measured_cop", [this]() { 
+                                  return footTasks[ContactState::Left]->measuredCoP().y();
+                                  }, Color::Blue,Style::Dashed),
+                              plot::Y(
+                                  "modeled_cop", [this]() { 
+                                  return modeledCoPLeft_.y();
+                                  }, Color::Blue,Style::Dashed));
+                        }),
+                 Button("Stop Left CoP Model Tracking (y)", [&gui]() { gui.removePlot("Left CoP Model Tracking (y)"); }));
+      
+  gui.addElement({"Tasks", name_, "Debug"}, ElementsStacking::Horizontal,
+                 Button("Plot Left CoP Model Tracking (x)",
+                        [this, &gui]() {
+                          gui.addPlot(
+                              "Left CoP Model Tracking (x)", plot::X("t", [this]() { return t_; }),
+                              plot::Y(
+                                  "support_min", [this]() { 
+                                        if(inContact(ContactState::Left))
+                                        {
+                                          const auto & contact = contacts_.at(ContactState::Left);
+                                          return -contact.halfLength();
+                                        }
+                                        return 0.;
+                                  }, Color::Red),
+                              plot::Y(
+                                  "support_max", [this]() { 
+                                        if(inContact(ContactState::Left))
+                                        {
+                                          const auto & contact = contacts_.at(ContactState::Left);
+                                          return contact.halfLength();
+                                        }
+                                        return 0.;
+                                  }, Color::Red),
+                              plot::Y(
+                                  "measured_cop", [this]() { 
+                                  return footTasks[ContactState::Left]->measuredCoP().x();
+                                  }, Color::Blue,Style::Dashed),
+                              plot::Y(
+                                  "modeled_cop", [this]() { 
+                                  return modeledCoPLeft_.x();
+                                  }, Color::Blue,Style::Dashed));
+                        }),
+                 Button("Stop Left CoP Model Tracking (x)", [&gui]() { gui.removePlot("Left CoP Model Tracking (x)"); }));
+
+  gui.addElement({"Tasks", name_, "Debug"}, ElementsStacking::Horizontal,
+                 Button("Plot Left Fz Model Tracking",
+                        [this, &gui]() {
+                          gui.addPlot(
+                              "Left Fz Model Tracking", plot::X("t", [this]() { return t_; }),
+                              plot::Y(
+                                  "measured_Fz", [this]() { 
+                                    if(inContact(ContactState::Left))
+                                    {
+                                      const auto & leftContact = contacts_.at(ContactState::Left);
+                                      const sva::PTransformd & X_0_lc = leftContact.surfacePose();
+                                      return X_0_lc.inv().dualMul(footTasks[ContactState::Left]->measuredWrench()).force().z();
+                                    }
+                                    return 0.;
+                                  }, Color::Blue,Style::Dashed),
+                              plot::Y(
+                                  "modeled_Fz", [this]() { 
+                                  return modeledFzLeft_;
+                                  }, Color::Blue,Style::Solid));
+                        }),
+                 Button("Stop Left Fz Model Tracking", [&gui]() { gui.removePlot("Left Fz Model Tracking"); }));
+
   gui.addElement({"Tasks", name_, "Debug"},
                  ArrayLabel("DCM average error [mm]", {"x", "y"}, [this]() { return vecFromError(dcmAverageError_); }),
                  ArrayLabel("DCM error [mm]", {"x", "y"}, [this]() { return vecFromError(dcmError_); }),
