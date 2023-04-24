@@ -340,7 +340,7 @@ void StabilizerTask::addToGUI(mc_rtc::gui::StateBuilder & gui)
                               plot::Y(
                                   "modeled_cop", [this]() { 
                                   return modeledCoPLeft_.y();
-                                  }, Color::Blue,Style::Dashed));
+                                  }, Color::Blue,Style::Solid));
                         }),
                  Button("Stop Left CoP Model Tracking (y)", [&gui]() { gui.removePlot("Left CoP Model Tracking (y)"); }));
       
@@ -374,7 +374,7 @@ void StabilizerTask::addToGUI(mc_rtc::gui::StateBuilder & gui)
                               plot::Y(
                                   "modeled_cop", [this]() { 
                                   return modeledCoPLeft_.x();
-                                  }, Color::Blue,Style::Dashed));
+                                  }, Color::Blue,Style::Solid));
                         }),
                  Button("Stop Left CoP Model Tracking (x)", [&gui]() { gui.removePlot("Left CoP Model Tracking (x)"); }));
 
