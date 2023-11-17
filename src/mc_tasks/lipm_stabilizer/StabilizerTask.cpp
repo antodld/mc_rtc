@@ -1231,8 +1231,14 @@ void StabilizerTask::computeCoPonHorizon(const std::vector<Eigen::Vector2d> & zm
 
   const double ratio0 = ratio;
 
+  //CoP Short Matrix such as CoP_L_i = A_cop_i * X + bCopL_i
+  //X begin the first half of the descision variables, the CoP_R_i, this is the same relationship using the second half
+  Eigen::MatrixXd Acop_i = Eigen::MatrixXd::Zero(2, 2 * nbReferences);
+  Eigen::Vector2d bcopL_i = Eigen::Vector2d::Zero();
+  Eigen::Vector2d bcopR_i = Eigen::Vector2d::Zero();
   for(Eigen::Index i = 0; i < nbReferences; i++)
   {
+
 
     if(i != 0)
     {
@@ -1242,67 +1248,63 @@ void StabilizerTask::computeCoPonHorizon(const std::vector<Eigen::Vector2d> & zm
       // ratio = 1 : fz on rightfoot, 0 on leftFoot
       ratio = clamp(d_proj / lankle_rankle, c_.safetyThresholds.MIN_DS_PRESSURE / fz_tot,
                     1 - (c_.safetyThresholds.MIN_DS_PRESSURE / fz_tot));
-    }
 
-    // Acop convert the CoP reference into the modeled CoP
-    // x be vector cotaining the CoP reference for one foot
-    // Acop * x + cop_0 * e^(-lambda t_i) = cop i in foot frame (left/right)
-    Eigen::MatrixXd Acop = Eigen::MatrixXd::Zero(2, 2 * nbReferences);
-    double t = static_cast<double>(i) * delta;
-    Eigen::Matrix2d exp_mat;
-    exp_mat << exp(-c_.copFzLambda.x() * (t + delta - (i == 0 ? t_delay : c_.delayCoP))), 0, 0,
-        exp(-c_.copFzLambda.y() * (t + delta - (i == 0 ? t_delay : c_.delayCoP)));
-    for(Eigen::Index k = 0; k <= i; k++)
-    {
-      if(k == i)
-      {
-        Acop(0, 2 * k) =
-            (1 - exp(-c_.copFzLambda.x() * (delta - (i == 0 ? t_delay : c_.delayCoP)))) * exp(-c_.copFzLambda.x() * t);
-        Acop(1, 2 * k + 1) =
-            (1 - exp(-c_.copFzLambda.y() * (delta - (i == 0 ? t_delay : c_.delayCoP)))) * exp(-c_.copFzLambda.y() * t);
-      }
-      else
-      {
-        Acop(0, 2 * k) = (1 - exp(-c_.copFzLambda.x() * delta)) * exp(-c_.copFzLambda.x() * t);
-        Acop(1, 2 * k + 1) = (1 - exp(-c_.copFzLambda.y() * delta)) * exp(-c_.copFzLambda.y() * t);
-      }
-      t -= delta;
+      Acop_i.block(0,0,1,Acop_i.cols()) *=  exp(-c_.copFzLambda.x() * delta);
+      Acop_i.block(1,0,1,Acop_i.cols()) *=  exp(-c_.copFzLambda.y() * delta);
+
+      bcopL_i(0) *=  exp(-c_.copFzLambda.x() * delta);
+      bcopL_i(1) *=  exp(-c_.copFzLambda.y() * delta);
+      bcopR_i(0) *=  exp(-c_.copFzLambda.x() * delta);
+      bcopR_i(1) *=  exp(-c_.copFzLambda.y() * delta);
+      
+      Acop_i(0,2 * (i-1)) += ( exp(c_.copFzLambda.x() * t_delay) - 1 ) * exp(-c_.copFzLambda.x() * delta);
+      Acop_i(1,2 * (i-1)) += ( exp(c_.copFzLambda.y() * t_delay) - 1 ) * exp(-c_.copFzLambda.y() * delta);
+
     }
-    auto Acop_view = Acop.block(0, 0, 2, 2 * (i + 1));
+    else
+    {
+      bcopL_i(0) =(measuredLeftCoP.x()  + delayedTargetCoPLeft_.x()  * ( exp(c_.copFzLambda.x() * t_delay) - 1) ) * exp(-c_.copFzLambda.x() * delta);
+      bcopL_i(1) =(measuredLeftCoP.y()  + delayedTargetCoPLeft_.y()  * ( exp(c_.copFzLambda.y() * t_delay) - 1) ) * exp(-c_.copFzLambda.y() * delta);
+      bcopR_i(0) =(measuredRightCoP.x() + delayedTargetCoPRight_.x() * ( exp(c_.copFzLambda.x() * t_delay) - 1) ) * exp(-c_.copFzLambda.x() * delta);
+      bcopR_i(1) =(measuredRightCoP.y() + delayedTargetCoPRight_.y() * ( exp(c_.copFzLambda.y() * t_delay) - 1) ) * exp(-c_.copFzLambda.y() * delta);
+    }
+    Acop_i(0,2 * i) += (1 - exp(- c_.copFzLambda.x() * ( delta - t_delay )) );
+    Acop_i(1,2 * i + 1) += (1 - exp(- c_.copFzLambda.y() * ( delta - t_delay )) );
+
+    //We only use the first (2 *i +1) elment of the decision variables to have the ith CoP
+    const Eigen::MatrixXd Acop = Acop_i.block(0,0,2,2*(i+1));
+
     // The task regulate zmp_i = (cop_l * f_z_l + cop_r * f_z_r)/f_z in world frame
-    Mcop.block(2 * i, 0, 2, Acop_view.cols()) = X_0_lc.inv().rotation().block(0, 0, 2, 2) * (1 - ratio) * Acop_view;
-    Mcop.block(2 * i, 2 * nbReferences, 2, Acop_view.cols()) =
-        X_0_rc.inv().rotation().block(0, 0, 2, 2) * ratio * Acop_view;
+    Mcop.block(2 * i, 0, 2, Acop.cols()) = X_0_lc.inv().rotation().block(0, 0, 2, 2) * (1 - ratio) * Acop;
+    Mcop.block(2 * i, 2 * nbReferences, 2, Acop.cols()) = X_0_rc.inv().rotation().block(0, 0, 2, 2) * ratio * Acop;
 
     // clang-format off
     bcop.segment(2 * i, 2) =
         zmp_ref[i]
         - X_0_lc.translation().segment(0, 2) * (1 - ratio)
         - X_0_rc.translation().segment(0, 2) * (ratio)
-        - X_0_lc.inv().rotation().block(0, 0, 2, 2) * (1 - ratio) * exp_mat * measuredLeftCoP_delayed.segment(0, 2)
-        - X_0_rc.inv().rotation().block(0, 0, 2, 2) * (ratio) * exp_mat * measuredRightCoP_delayed.segment(0, 2);
+        - X_0_lc.inv().rotation().block(0, 0, 2, 2) * (1 - ratio) * bcopL_i
+        - X_0_rc.inv().rotation().block(0, 0, 2, 2) * (ratio) * bcopR_i;
     // clang-format on
 
-    McopReg.block(2 * i, 0, 2, Acop_view.cols()) = Acop_view;
-    McopReg.block(2 * nbReferences + 2 * i, 2 * nbReferences, 2, Acop_view.cols()) = Acop_view;
-    bcopReg.segment(2 * i, 2) = -t_lankle_lc.segment(0, 2) - exp_mat * measuredLeftCoP_delayed.segment(0, 2);
-    bcopReg.segment(2 * (i + nbReferences), 2) =
-        -t_rankle_rc.segment(0, 2) - exp_mat * measuredRightCoP_delayed.segment(0, 2);
+    McopReg.block(2 * i, 0, 2, Acop.cols()) = Acop;
+    McopReg.block(2 * (nbReferences + i ), 2 * nbReferences , 2, Acop.cols()) = Acop;
+    bcopReg.segment(2 * i, 2) = t_lankle_lc.segment(0, 2) - bcopL_i;
+    bcopReg.segment(2 * (i + nbReferences), 2) = t_rankle_rc.segment(0, 2) - bcopR_i;
 
     // CoP must remain bounded in polygon cstr
-    Aineq.block(4 * i, 0, 4, Acop_view.cols()) = normals * Acop_view;
+    Aineq.block(4 * i                 , 0               , 4, Acop.cols()) = normals * Acop;
+    Aineq.block(4 * (nbReferences + i), 2 * nbReferences, 4, Acop.cols()) = normals * Acop;
 
-    bineq.segment(4 * i, 4) = offsetLeft - normals * exp_mat * measuredLeftCoP_delayed.segment(0, 2);
-    bineq.segment(4 * (nbReferences + i), 4) = offsetRight - normals * exp_mat * measuredRightCoP_delayed.segment(0, 2);
+    bineq.segment(4 * i, 4) = offsetLeft - normals * bcopL_i;
+    bineq.segment(4 * (nbReferences + i), 4) = offsetRight - normals * bcopR_i;
 
-    McopDiff.block(2 * i, 0, 2, Acop_view.cols()) = Acop_view;
-    McopDiff.block(2 * i, 2 * nbReferences, 2, Acop_view.cols()) = -Acop_view;
-    bcopDiff.segment(2 * i, 2) = exp_mat * (measuredLeftCoP_delayed - measuredRightCoP_delayed).segment(0, 2);
+    McopDiff.block(2 * i, 0, 2, Acop.cols()) = Acop;
+    McopDiff.block(2 * i, 2 * nbReferences, 2, Acop.cols()) -= Acop;
+    bcopDiff.segment(2 * i, 2) = bcopL_i - bcopR_i;
   }
 
-  // We copy the constraint for the other contact
-  Aineq.block(4 * nbReferences, 2 * nbReferences, 4 * nbReferences, 2 * nbReferences) =
-      Aineq.block(0, 0, 4 * nbReferences, 2 * nbReferences);
+
 
   Eigen::MatrixXd Q = c_.fdmpcWeights.cop_ * Mcop.transpose() * Mcop;
   Q += c_.fdmpcWeights.copDiff_ * McopDiff.transpose() * McopDiff;
