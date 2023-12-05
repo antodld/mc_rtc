@@ -614,8 +614,8 @@ void StabilizerTask::setExternalWrenches(const std::vector<std::string> & surfac
                                          const std::vector<sva::MotionVecd> & gains)
 {
   if(surfaceNames.size() > 0
-     && !(c_.extWrench.addExpectedCoMOffset || c_.extWrench.modifyCoMErr || c_.extWrench.modifyZMPErr
-          || c_.extWrench.modifyZMPErrD))
+     && !( (c_.extWrench.addExpectedCoMOffset || c_.extWrench.modifyCoMErr || c_.extWrench.modifyZMPErr
+          || c_.extWrench.modifyZMPErrD || c_.extWrench.excludeFromDCMBiasEst) ))
   {
     mc_rtc::log::warning(
         "[StabilizerTask] external wrenches are set, but the configurations for handling them are invalid.");
