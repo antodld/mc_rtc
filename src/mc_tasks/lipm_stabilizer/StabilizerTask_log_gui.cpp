@@ -176,6 +176,9 @@ void StabilizerTask::addToGUI(mc_rtc::gui::StateBuilder & gui)
                      "subtractMeasuredValue", [this]() { return c_.extWrench.subtractMeasuredValue; },
                      [this]() { c_.extWrench.subtractMeasuredValue = !c_.extWrench.subtractMeasuredValue; }),
                  Checkbox(
+                     "subtractTargetValue", [this]() { return c_.extWrench.subtractTargetValue; },
+                     [this]() { c_.extWrench.subtractTargetValue = !c_.extWrench.subtractTargetValue; }),
+                 Checkbox(
                      "modifyCoMErr", [this]() { return c_.extWrench.modifyCoMErr; },
                      [this]() { c_.extWrench.modifyCoMErr = !c_.extWrench.modifyCoMErr; }),
                  Checkbox(

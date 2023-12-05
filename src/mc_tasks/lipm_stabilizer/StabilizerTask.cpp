@@ -948,7 +948,7 @@ sva::ForceVecd StabilizerTask::computeDesiredWrench()
     desiredForce -= extWrenchSumMeasured_.force();
     desiredMoment -= extWrenchSumMeasured_.moment();
   }
-  else
+  else if(c_.extWrench.subtractTargetValue)
   {
     desiredForce -= extWrenchSumTarget_.force();
     desiredMoment -= extWrenchSumTarget_.moment();
