@@ -286,6 +286,8 @@ set(mc_tvm_HDR
     ${mc_tvm_HDR_DIR}/CollisionFunction.h
     ${mc_tvm_HDR_DIR}/CoM.h
     ${mc_tvm_HDR_DIR}/CoMFunction.h
+    ${mc_tvm_HDR_DIR}/CoM6D.h
+    ${mc_tvm_HDR_DIR}/CoM6DFunction.h
     ${mc_tvm_HDR_DIR}/CoMInConvexFunction.h
     ${mc_tvm_HDR_DIR}/CompoundJointFunction.h
     ${mc_tvm_HDR_DIR}/ContactFunction.h
@@ -311,6 +313,8 @@ set(mc_tvm_SRC
     mc_tvm/CollisionFunction.cpp
     mc_tvm/CoM.cpp
     mc_tvm/CoMFunction.cpp
+    mc_tvm/CoM6D.cpp
+    mc_tvm/CoM6DFunction.cpp
     mc_tvm/CoMInConvexFunction.cpp
     mc_tvm/CompoundJointFunction.cpp
     mc_tvm/ContactFunction.cpp
@@ -497,6 +501,7 @@ set(mc_tasks_SRC
     mc_tasks/EndEffectorTask.cpp
     mc_tasks/RelativeEndEffectorTask.cpp
     mc_tasks/CoMTask.cpp
+    mc_tasks/CoMTask6D.cpp
     mc_tasks/AddRemoveContactTask.cpp
     mc_tasks/BSplineTrajectoryTask.cpp
     mc_tasks/ExactCubicTrajectoryTask.cpp
@@ -522,6 +527,7 @@ set(mc_tasks_HDR
     ../include/mc_tasks/AddRemoveContactTask.h
     ../include/mc_tasks/api.h
     ../include/mc_tasks/CoMTask.h
+    ../include/mc_tasks/CoMTask6D.h
     ../include/mc_tasks/EndEffectorTask.h
     ../include/mc_tasks/MetaTaskLoader.h
     ../include/mc_tasks/MomentumTask.h

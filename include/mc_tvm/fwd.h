@@ -12,6 +12,9 @@ namespace mc_tvm
 struct CoM;
 using CoMPtr = std::unique_ptr<CoM>;
 
+struct CoM6D;
+using CoM6DPtr = std::unique_ptr<CoM6D>;
+
 struct Convex;
 using ConvexPtr = std::unique_ptr<Convex>;
 

@@ -37,6 +37,7 @@ Robot::Robot(NewRobotToken, const mc_rbdyn::Robot & robot)
   limits_.tdu = rbd::dofToVector(robot_.mb(), robot_.tdu());
 
   com_.reset(new CoM(CoM::NewCoMToken{}, *this));
+  com6D_.reset(new CoM6D(CoM6D::NewCoMToken{}, *this));
 
   momentum_.reset(new Momentum(Momentum::NewMomentumToken{}, *com_));
   //

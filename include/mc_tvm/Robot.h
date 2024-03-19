@@ -5,6 +5,7 @@
 #pragma once
 
 #include <mc_tvm/CoM.h>
+#include <mc_tvm/CoM6D.h>
 #include <mc_tvm/Limits.h>
 #include <mc_tvm/Momentum.h>
 
@@ -140,6 +141,12 @@ public:
   /** Returns the CoM algorithm associated to this robot */
   inline CoM & comAlgo() noexcept { return *com_; }
 
+  /** Returns the CoM algorithm associated to this robot (const) */
+  inline const CoM6D & com6DAlgo() const noexcept { return *com6D_; }
+
+  /** Returns the CoM algorithm associated to this robot */
+  inline CoM6D & com6DAlgo() noexcept { return *com6D_; }
+
   /** Returns the momentum algorithm associated with this robot (const) */
   inline const Momentum & momentumAlgo() const noexcept { return *momentum_; }
 
@@ -211,6 +218,8 @@ private:
   rbd::ForwardDynamics fd_;
   /** CoM algorithm of this robot */
   CoMPtr com_;
+  /** CoM6D algorithm of this robot */
+  CoM6DPtr com6D_;
   /** Momentum algorithm of this robot */
   MomentumPtr momentum_;
   /** Correspondance between refJointOrder index and q index. **/
