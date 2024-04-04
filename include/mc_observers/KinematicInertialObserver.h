@@ -72,6 +72,8 @@ private:
    **/
   mc_filter::LowPass<sva::MotionVecd> velFilter_;
   sva::MotionVecd velW_ = sva::MotionVecd::Zero();
+  sva::MotionVecd oldvelW_ = sva::MotionVecd::Zero();
+  sva::MotionVecd accW_ = sva::MotionVecd::Zero();
 
   bool logVelocity_ = true; ///< Whether to log the estimated velocity
 

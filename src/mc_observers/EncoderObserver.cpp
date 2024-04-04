@@ -47,9 +47,22 @@ void EncoderObserver::configure(const mc_control::MCController & ctl, const mc_r
         name_, velocity);
     ;
   }
+  const std::string & accel = config("acceleration", std::string("control"));
+  if(accel == "control") { accUpdate_ = AccUpdate::Control; }
+  else if(accel == "velocitiesFiniteDifferences") { accUpdate_ = AccUpdate::VelocitiesFiniteDifferences; }
+  else if(accel == "none") { accUpdate_ = AccUpdate::None; }
+  else
+  {
+    mc_rtc::log::error_and_throw(
+        "[EncoderObserver::{}] Invalid configuration value \"{}\" for field \"acceleration\" (valid values are [control, "
+        "control, velocitiesFiniteDifferences, none])",
+        name_, accel);
+    ;
+  }
 
   config("computeFK", computeFK_);
   config("computeFV", computeFV_);
+  config("computeFA", computeFA_);
 
   if(config.has("log"))
   {
@@ -75,13 +88,17 @@ bool EncoderObserver::run(const mc_control::MCController & ctl)
     const auto & enc = robot.encoderValues();
     if(enc.empty()
        && (posUpdate_ == PosUpdate::EncoderValues || velUpdate_ == VelUpdate::EncoderFiniteDifferences
-           || velUpdate_ == VelUpdate::EncoderVelocities))
+           || velUpdate_ == VelUpdate::EncoderVelocities || accUpdate_ == AccUpdate::VelocitiesFiniteDifferences))
     {
       mc_rtc::log::error_and_throw("[EncoderObserver] requires robot {} to have encoder measurements", robot_);
     }
-    if(velUpdate_ == VelUpdate::EncoderVelocities && robot.encoderVelocities().empty())
+    if( (velUpdate_ == VelUpdate::EncoderVelocities) && robot.encoderVelocities().empty())
     {
       mc_rtc::log::error_and_throw("[EncoderObserver] requires robot {} to have encoder velocity measurements", robot_);
+    }
+    if((velUpdate_ == VelUpdate::None && accUpdate_ != AccUpdate::None))
+    {
+     mc_rtc::log::error_and_throw("[EncoderObserver] requires robot {} to have velocity estimation to estimate acceleration", robot_);
     }
 
     if(!enc.empty())
@@ -89,6 +106,8 @@ bool EncoderObserver::run(const mc_control::MCController & ctl)
       prevEncoders_ = enc;
       encodersVelocity_.resize(enc.size());
       for(unsigned i = 0; i < enc.size(); ++i) { encodersVelocity_[i] = 0; }
+      encodersAcceleration_.resize(enc.size());
+      prevEncodersVelocity_ = encodersVelocity_;
     }
   }
   if(velUpdate_ == VelUpdate::EncoderFiniteDifferences)
@@ -99,6 +118,18 @@ bool EncoderObserver::run(const mc_control::MCController & ctl)
       encodersVelocity_[i] = (enc[i] - prevEncoders_[i]) / ctl.timeStep;
       prevEncoders_[i] = enc[i];
     }
+  }
+  if(velUpdate_ == VelUpdate::EncoderVelocities)
+  {
+    encodersVelocity_ = robot.encoderVelocities();
+  }
+  if(accUpdate_ == AccUpdate::VelocitiesFiniteDifferences)
+  {
+    for(unsigned i = 0; i < encodersVelocity_.size(); ++i)
+    {
+      encodersAcceleration_[i] = (encodersVelocity_[i] - prevEncodersVelocity_[i]) / ctl.timeStep;
+      prevEncodersVelocity_[i] = encodersVelocity_[i];
+    }  
   }
   return true;
 }
@@ -124,18 +155,23 @@ void EncoderObserver::update(mc_control::MCController & ctl)
 
       // Update velocity
       if(velUpdate_ == VelUpdate::Control) { realRobot.mbc().alpha[jidx][0] = robot.mbc().alpha[jidx][0]; }
-      else if(velUpdate_ == VelUpdate::EncoderFiniteDifferences)
+      else if(velUpdate_ == VelUpdate::EncoderFiniteDifferences || velUpdate_ == VelUpdate::EncoderVelocities)
       {
         realRobot.mbc().alpha[jidx][0] = encodersVelocity_[i];
       }
-      else if(velUpdate_ == VelUpdate::EncoderVelocities)
+
+      // Update acecl
+      if(accUpdate_ == AccUpdate::Control) { realRobot.mbc().alphaD[jidx][0] = robot.mbc().alphaD[jidx][0]; }
+      else if(accUpdate_ == AccUpdate::VelocitiesFiniteDifferences)
       {
-        realRobot.mbc().alpha[jidx][0] = robot.encoderVelocities()[i];
+        realRobot.mbc().alphaD[jidx][0] = encodersAcceleration_[i];
       }
+
     }
   }
   if(computeFK_ && posUpdate_ != PosUpdate::None) { realRobot.forwardKinematics(); }
   if(computeFV_ && velUpdate_ != VelUpdate::None) { realRobot.forwardVelocity(); }
+  if(computeFA_ && accUpdate_ != AccUpdate::None) { realRobot.forwardAcceleration(); }
 }
 
 void EncoderObserver::addToLogger(const mc_control::MCController & ctl,

@@ -55,6 +55,10 @@ bool KinematicInertialObserver::run(const mc_control::MCController & ctl)
   }
   else { mc_rtc::log::warning("[{}] Skipping velocity update (anchor frame jumped)", name()); }
   posWPrev_ = posW;
+
+  accW_ = ((velW_ - oldvelW_)/dt_) - sva::MotionVecd(Eigen::Vector3d::Zero(),velW_.angular().cross(velW_.linear()));
+  oldvelW_ = velW_;
+
   return res;
 }
 
@@ -62,6 +66,7 @@ void KinematicInertialObserver::update(mc_control::MCController & ctl)
 {
   KinematicInertialPoseObserver::update(ctl);
   ctl.realRobot(robot_).velW(velW_);
+  ctl.realRobot(robot_).accW(accW_);
 }
 
 const sva::MotionVecd & KinematicInertialObserver::velW() const

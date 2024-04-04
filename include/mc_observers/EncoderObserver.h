@@ -76,11 +76,19 @@ protected:
     EncoderFiniteDifferences, ///< Joint velocity from finite differences of robot.encoderValues (encoder sensor)
     None ///< Do not compute/update value
   };
+  enum class AccUpdate
+  {
+    Control, ///< Use joint velocities from robot.mbc.alpha (control)
+    VelocitiesFiniteDifferences, ///< Joint Acceleration from finite differences of computed velocities (whether the method)
+    None ///< Do not compute/update value
+  };
 
   PosUpdate posUpdate_ = PosUpdate::EncoderValues;
   VelUpdate velUpdate_ = VelUpdate::EncoderFiniteDifferences;
+  AccUpdate accUpdate_ = AccUpdate::Control;
   bool computeFK_ = true; ///< Whether to compute forward kinematics
   bool computeFV_ = true; ///< Whether to compute forward velocity
+  bool computeFA_ = true; ///< Whether to compute forward acceleration
 
   bool initialized_ = false; ///< True if the observer's memory has been initialized
 
@@ -88,7 +96,9 @@ protected:
   std::string updateRobot_ = ""; ///< Robot to update (defaults to robot_)
 
   std::vector<double> prevEncoders_; ///< Previous encoder values (for VelUpdate::EncoderFiniteDifferences)
+  std::vector<double> prevEncodersVelocity_; ///< Previous encoder values (for AccUpdate::VelocitiesFiniteDifferences)
   std::vector<double> encodersVelocity_; ///< Estimated encoder velocity
+  std::vector<double> encodersAcceleration_; ///< Estimated encoder velocity
 
   bool logPosition_ = false;
   bool logVelocity_ = true;
