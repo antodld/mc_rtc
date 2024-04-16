@@ -765,7 +765,7 @@ private:
   /** Get 6D contact admittance vector from 2D CoP admittance. */
   inline sva::ForceVecd contactAdmittance() const noexcept
   {
-    return {{c_.copAdmittance.y(), c_.copAdmittance.x(), 0.}, {0., 0., 0.}};
+    return {{c_.copAdmittance.x(), c_.copAdmittance.y(), 0.}, {0., 0., 0.}};
   }
 
   inline void zmpcc(const ZMPCCConfiguration & zmpccConfig) noexcept
