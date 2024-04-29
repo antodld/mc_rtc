@@ -11,9 +11,11 @@
 
 #include <mc_tvm/CoM6DFunction.h>
 
+
 namespace mc_tasks
 {
 
+static inline mc_rtc::void_ptr_caster<tasks::qp::CoM6DTask> tasks_error{};
 static inline mc_rtc::void_ptr_caster<mc_tvm::CoM6DFunction> tvm_error{};
 
 CoMTask6D::CoMTask6D(const mc_rbdyn::Robots & robots, unsigned int robotIndex, double stiffness, double weight)
@@ -23,6 +25,9 @@ CoMTask6D::CoMTask6D(const mc_rbdyn::Robots & robots, unsigned int robotIndex, d
   switch(backend_)
   {
 
+    case Backend::Tasks:
+      finalize<Backend::Tasks, tasks::qp::CoM6DTask>(robots.mbs(), static_cast<int>(robotIndex), robot.mbc().com);
+        break;
     case Backend::TVM:
       finalize<Backend::TVM, mc_tvm::CoM6DFunction>(robot);
       break;
@@ -76,6 +81,9 @@ void CoMTask6D::com(const sva::PTransformd & com)
 {
   switch(backend_)
   {
+    case Backend::Tasks:
+      tasks_error(errorT)->com(com);
+      break;
     case Backend::TVM:
       tvm_error(errorT)->com(com);
       break;
@@ -88,6 +96,8 @@ const sva::PTransformd & CoMTask6D::com() const
 {
   switch(backend_)
   {
+    case Backend::Tasks:
+      return tasks_error(errorT)->com();
     case Backend::TVM:
       return tvm_error(errorT)->com();
     default:
@@ -99,6 +109,8 @@ const sva::PTransformd & CoMTask6D::actual() const
 {
   switch(backend_)
   {
+    case Backend::Tasks:
+      return tasks_error(errorT)->actual();
     case Backend::TVM:
       return tvm_error(errorT)->actual();
     default:
