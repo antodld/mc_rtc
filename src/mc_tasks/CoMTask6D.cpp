@@ -8,6 +8,7 @@
 
 #include <mc_rtc/ConfigurationHelpers.h>
 #include <mc_rtc/gui/Transform.h>
+#include <mc_rtc/gui/ArrayLabel.h>
 
 #include <mc_tvm/CoM6DFunction.h>
 
@@ -16,6 +17,7 @@ namespace mc_tasks
 {
 
 static inline mc_rtc::void_ptr_caster<tasks::qp::CoM6DTask> tasks_error{};
+static inline mc_rtc::void_ptr_caster<tasks::qp::TrajectoryTask> tasks_trajectory{};
 static inline mc_rtc::void_ptr_caster<mc_tvm::CoM6DFunction> tvm_error{};
 
 CoMTask6D::CoMTask6D(const mc_rbdyn::Robots & robots, unsigned int robotIndex, double stiffness, double weight)
@@ -47,7 +49,7 @@ void CoMTask6D::reset()
 
 void CoMTask6D::load(mc_solver::QPSolver & solver, const mc_rtc::Configuration & config)
 {
-  TrajectoryBase::load(solver, config);
+  TrajectoryTaskGeneric::load(solver, config);
   const auto & robot_name = solver.robots().robot(robot_index_).name();
   this->com(solver.robots().robot(robot_name).mbc().com);
   if(config.has("com6d")) { this->com(config("com6d")); }
@@ -69,8 +71,31 @@ void CoMTask6D::load(mc_solver::QPSolver & solver, const mc_rtc::Configuration &
     const sva::PTransformd X_offset = config("move_com_world",sva::PTransformd::Identity());
     this->move_com(sva::PTransformd(com().rotation()) * X_offset * sva::PTransformd(com().rotation()).inv()); 
   }
+  if(config.has("flight"))
+  {
+    this->flight(config("flight",false));
+  }
 
 }
+
+void CoMTask6D::update(mc_solver::QPSolver & s)
+{
+  if(flight_)
+  {
+      const auto & r = s.robot(robot_index_);
+      const Eigen::Vector6d acc_target = stiffness_.asDiagonal() * ( refVel_ - r.mbc().comVel.vector());
+      const Eigen::Vector6d refVel = - rbd::centroidalInertia(r.mb(),r.mbc(),r.mbc().com.translation()) * acc_target;
+      switch(backend_)
+      {
+        case Backend::Tasks:
+          tasks_trajectory(trajectoryT_)->refVel(refVel);
+          break;
+        default:
+          break;
+      }
+  }
+}
+
 
 void CoMTask6D::move_com(const sva::PTransformd & move)
 {
@@ -134,6 +159,23 @@ void CoMTask6D::addToGUI(mc_rtc::gui::StateBuilder & gui)
                      [this](const sva::PTransformd & com) { this->com(com); }),
                  mc_rtc::gui::Transform("com", [this]() -> const sva::PTransformd & { return this->actual(); }));
 }
+
+  void CoMTask6D::flight(const bool s)
+  {
+    flight_ = s;
+    switch(backend_)
+    {
+      case Backend::Tasks:
+        tasks_error(errorT)->flight(s);
+        break;
+      default:
+        mc_rtc::log::error_and_throw("Not implemented");
+    }
+  }
+  bool CoMTask6D::flight()
+  {
+    return flight_;
+  }
 
 } // namespace mc_tasks
 

@@ -133,6 +133,7 @@ void TrajectoryTaskGeneric::addToSolver(mc_solver::QPSolver & solver)
             trajectory->task_ =
                 tvm_solver(solver).problem().add(error_ptr == 0., tvm::task_dynamics::P(stiffness_), reqs);
           }
+          weight(weight_);
         };
         if(selectorT_) { addTask(*tvm_selector(selectorT_)); }
         else { addTask(*tvm_error(errorT)); }
@@ -279,7 +280,18 @@ void TrajectoryTaskGeneric::weight(double w)
     case Backend::TVM:
     {
       auto trajectory = tvm_trajectory(trajectoryT_);
-      if(trajectory->task_) { trajectory->task_->requirements.weight() = weight_; }
+      if(trajectory->task_)
+      { 
+        trajectory->task_->requirements.weight() = weight_;
+        if(w ==0)
+        {
+          dimWeight(Eigen::VectorXd::Zero(trajectory->dimWeight_.size())) ;
+        }
+        else
+        {
+          dimWeight(Eigen::VectorXd::Ones(trajectory->dimWeight_.size())) ;
+        }
+      }
       break;
     }
     default:

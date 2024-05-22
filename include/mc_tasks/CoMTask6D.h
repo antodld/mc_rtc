@@ -57,12 +57,17 @@ public:
   /*! \brief Load from configuration */
   void load(mc_solver::QPSolver &, const mc_rtc::Configuration & config) override;
 
+  void flight(const bool s);
+  bool flight();
+
 protected:
   void addToGUI(mc_rtc::gui::StateBuilder &) override;
   void addToLogger(mc_rtc::Logger & logger) override;
+  void update(mc_solver::QPSolver &) override;
 
 private:
   unsigned int robot_index_;
+  bool flight_ = false;
 };
 
 } // namespace mc_tasks
