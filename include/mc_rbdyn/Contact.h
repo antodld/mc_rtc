@@ -121,6 +121,8 @@ public:
   /** Return the contact friction */
   double friction() const;
 
+  std::vector<Eigen::Vector3d> force_span() const;
+
   /** Set the contact friction */
   void friction(double friction);
 
@@ -132,9 +134,9 @@ public:
   sva::PTransformd X_0_r2s(const mc_rbdyn::Robot & robot) const;
   sva::PTransformd X_0_r2s(const mc_rbdyn::Robots & robots) const;
 
-  std::vector<sva::PTransformd> r1Points();
+  std::vector<sva::PTransformd> r1Points() const;
 
-  std::vector<sva::PTransformd> r2Points();
+  std::vector<sva::PTransformd> r2Points() const;
 
   sva::PTransformd compute_X_r2s_r1s(const mc_rbdyn::Robots & robots) const;
 

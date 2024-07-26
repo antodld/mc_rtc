@@ -130,6 +130,24 @@ std::vector<sva::PTransformd> computePoints(const mc_rbdyn::Surface & robotSurfa
                                envSurface.name());
 }
 
+std::vector<Eigen::Vector3d> Contact::force_span() const
+{
+  auto yaw = [&](const double y) -> Eigen::Matrix3d 
+  {
+    Eigen::Matrix3d R = Eigen::Matrix3d::Identity(); 
+    R.col(0) << cos(y) , sin(y) , 0;
+    R.col(1) << -sin(y) , cos(y) , 0;
+    return R;
+  };
+  std::vector<Eigen::Vector3d> v_span;
+  for (int i = 0 ; i < nrConeGen ; i++)
+  {
+    const auto R = yaw(2 * 3.14 *( (double) i / (double) nrConeGen));
+    v_span.push_back(R * Eigen::Vector3d{impl->friction,impl->friction,1});
+  }
+  return v_span;
+}
+
 Contact::Contact(const mc_rbdyn::Robots & robots,
                  const std::string & robotSurface,
                  const std::string & envSurface,
@@ -320,7 +338,7 @@ sva::PTransformd Contact::X_0_r2s(const mc_rbdyn::Robot & robot) const
   return impl->X_r2s_r1s.inv() * (impl->r1Surface->X_0_s(robot));
 }
 
-std::vector<sva::PTransformd> Contact::r1Points()
+std::vector<sva::PTransformd> Contact::r1Points() const
 {
   if(isFixed()) { return computePoints(*(r1Surface()), *(r2Surface()), X_r2s_r1s()); }
   else
@@ -330,7 +348,7 @@ std::vector<sva::PTransformd> Contact::r1Points()
   }
 }
 
-std::vector<sva::PTransformd> Contact::r2Points()
+std::vector<sva::PTransformd> Contact::r2Points() const
 {
   if(isFixed()) { return computePoints(*(r2Surface()), *(r1Surface()), X_r2s_r1s().inv()); }
   else

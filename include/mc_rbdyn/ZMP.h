@@ -4,6 +4,9 @@
 
 #include <mc_rbdyn/api.h>
 #include <SpaceVecAlg/SpaceVecAlg>
+#include <mc_rbdyn/Contact.h>
+#include <mc_rbdyn/Robot.h>
+
 
 namespace mc_rbdyn
 {
@@ -92,5 +95,10 @@ bool MC_RBDYN_DLLAPI zmp(Eigen::Vector3d & zmpOut,
                          const sva::ForceVecd & netTotalWrench,
                          const sva::PTransformd & zmpFrame,
                          double minimalNetNormalForce = 1.) noexcept;
+
+std::vector<std::vector<Eigen::Vector3d>> MC_RBDYN_DLLAPI full_support_region(const Robot & robot,
+                                                              const std::vector<Contact> & contacts,
+                                                              const Eigen::Vector3d & plane_p,
+                                                              const Eigen::Vector3d & plane_n);
 
 } // namespace mc_rbdyn
